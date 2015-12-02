@@ -12,7 +12,6 @@ import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.util.IncorrectOperationException;
 import com.permissionsmanager.graphicalinterface.MainWindow;
-import com.permissionsmanager.graphicalinterface.PermissionRadioButton;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
@@ -109,14 +108,14 @@ public class SuggestPermissionIntention implements IntentionAction {
             mDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
            // mDialog.getRootPane().setDefaultButton(panel.getConfirmButton());
 
-            MainWindow mainWindow = new MainWindow(matchingPermissions, e -> {
-                PermissionRadioButton permissionButton = (PermissionRadioButton) e.getSource();
-                Messages.showMessageDialog(project, permissionButton.getPermissionMap().getXMLPermissionTag(), "Message", Messages.getInformationIcon());
-            });
+            MainWindow mainWindow = new MainWindow(matchingPermissions);
+            mainWindow.setOnSelectionMadeListener(permissionMap -> Messages.showMessageDialog(  project,
+                                                                                                permissionMap.getXMLPermissionTag(),
+                                                                                                "Message",
+                                                                                                Messages.getInformationIcon()));
             mDialog.getContentPane().add(mainWindow);
             mDialog.pack();
             mDialog.setLocationRelativeTo(null);
-            mDialog.getRootPane().setDefaultButton(panel.getConfirmButton());
             mDialog.setVisible(true);
 
             // In GUI
