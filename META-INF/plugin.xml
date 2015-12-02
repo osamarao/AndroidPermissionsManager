@@ -1,0 +1,46 @@
+<idea-plugin version="2">
+  <id>edu.wichita.plugin.id</id>
+  <name>CtrlShiftAltS</name>
+  <version>1.0</version>
+  <vendor email="oxrao@wichita.edu" url="http://www.wichita.edu">WSU EECS</vendor>
+
+  <description><![CDATA[
+      Let's see;<br>
+      <em>most HTML tags may be used</em>
+    ]]></description>
+
+  <change-notes><![CDATA[
+      Add change notes here.<br>
+      <em>most HTML tags may be used</em>
+    ]]>
+  </change-notes>
+
+  <!-- please see https://confluence.jetbrains.com/display/IDEADEV/Build+Number+Ranges for description -->
+  <idea-version since-build="131"/>
+
+  <!-- please see https://confluence.jetbrains.com/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
+       on how to target different products -->
+  <!-- uncomment to enable plugin in all products
+  <depends>com.intellij.modules.lang</depends>
+  -->
+
+  <extensions defaultExtensionNs="com.intellij">
+    <!-- Add your extensions here -->
+    <intentionAction>
+      <className>com.permissionsmanager.SuggestPermissionIntention</className>
+    </intentionAction>
+  </extensions>
+
+  <application-components>
+    <!-- Add your application components here -->
+  </application-components>
+
+  <project-components>
+    <!-- Add your project components here -->
+  </project-components>
+
+  <actions>
+
+  </actions>
+
+</idea-plugin>
