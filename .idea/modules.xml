@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/CtrlShiftAltS.iml" filepath="$PROJECT_DIR$/CtrlShiftAltS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Android Permission Manager.iml" filepath="$PROJECT_DIR$/Android Permission Manager.iml" />
     </modules>
   </component>
 </project>

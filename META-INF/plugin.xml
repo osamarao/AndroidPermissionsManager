@@ -1,18 +1,15 @@
 <idea-plugin version="2">
   <id>edu.wichita.plugin.id</id>
-  <name>CtrlShiftAltS</name>
-  <version>1.0</version>
+  <name>Android Permissions Manager</name>
+  <version>1.0beta</version>
   <vendor email="oxrao@wichita.edu" url="http://www.wichita.edu">WSU EECS</vendor>
 
   <description><![CDATA[
-      Let's see;<br>
-      <em>most HTML tags may be used</em>
+      This plugin provides suggestions for permission for Android APIs.</br>
+      This is added as an intention and once a permission is selected it is copied to the clipboard and can then be pasted in the AndroidManifest.xml
     ]]></description>
 
-  <change-notes><![CDATA[
-      Add change notes here.<br>
-      <em>most HTML tags may be used</em>
-    ]]>
+  <change-notes>
   </change-notes>
 
   <!-- please see https://confluence.jetbrains.com/display/IDEADEV/Build+Number+Ranges for description -->

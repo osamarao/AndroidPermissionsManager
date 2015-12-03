@@ -6,10 +6,10 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.vfs.ReadonlyStatusHandler;
-import com.intellij.psi.*;
-import com.intellij.psi.xml.XmlFile;
-import com.intellij.psi.xml.XmlTag;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiIdentifier;
+import com.intellij.psi.PsiJavaCodeReferenceElement;
 import com.intellij.util.IncorrectOperationException;
 import com.permissionsmanager.graphicalinterface.MainWindow;
 import org.jetbrains.annotations.Nls;
@@ -18,7 +18,6 @@ import org.jetbrains.annotations.NotNull;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.StringSelection;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,11 +27,13 @@ import java.util.Scanner;
  * Created by Osama Rao on 17-Nov-15.
  */
 public class SuggestPermissionIntention implements IntentionAction {
+    private PermissionMap[] permissionsMap;
+
     @Nls
     @NotNull
     @Override
     public String getText() {
-        return "Analyze type and suggest a permission";
+        return "Analyze Type and suggest permission(s)";
     }
 
     @Nls
@@ -58,104 +59,74 @@ public class SuggestPermissionIntention implements IntentionAction {
 
     @Override
     public void invoke(@NotNull Project project, Editor editor, PsiFile psiFile) throws IncorrectOperationException {
-
-
         PsiElement referenceAt = psiFile.findElementAt(editor.getCaretModel().getOffset());
 
         WriteCommandAction.runWriteCommandAction(project, () -> {
-            PermissionMap[] permissionsMaps = null;
-
-            String fullyQualifiedType = ((PsiJavaCodeReferenceElement) ((PsiIdentifier) referenceAt).getContext()).getQualifiedName();
-            // Serialize json
-            try {
-                Scanner scanner = new Scanner(getClass().getResourceAsStream("mapping.json"));
-                while (scanner.hasNextLine()) {
-                    permissionsMaps = new Gson().fromJson(scanner.nextLine(), PermissionMap[].class);
-                }
-            } catch (NullPointerException e) {
-                e.printStackTrace();
-                editor.getDocument().insertString(editor.getCaretModel().getOffset(), e.getLocalizedMessage());
-            }
-
-
-            // Match Api to Permission
-            ArrayList<PermissionMap> matchingPermissions = new ArrayList<>();
-            for (PermissionMap permissionMap : permissionsMaps) {
-                if (permissionMap.getApi().contains(fullyQualifiedType)) {
-                    matchingPermissions.add(permissionMap);
-                }
-            }
-
-            // Sort by confidence
-            /*
-                a negative integer, zero, or a positive integer as the first argument is
-                less than, equal to, or greater than the second.
-             */
-            Collections.sort(matchingPermissions, (first, second) -> {
-                final int BEFORE = -1;
-                final int EQUAL = 0;
-                final int AFTER = 1;
-                if (first.getConfidence() < second.getConfidence())
-                    return AFTER;
-                else if (first.getConfidence().equals(second.getConfidence()))
-                    return EQUAL;
-                else
-                    return BEFORE;
-            });
-
-            // List matching permissions
-            JFrame mDialog = new JFrame("App Name");
-            mDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-           // mDialog.getRootPane().setDefaultButton(panel.getConfirmButton());
-
-            MainWindow mainWindow = new MainWindow(matchingPermissions);
-            mainWindow.setOnSelectionMadeListener(permissionMap -> Messages.showMessageDialog(  project,
-                                                                                                permissionMap.getXMLPermissionTag(),
-                                                                                                "Message",
-                                                                                                Messages.getInformationIcon()));
-            mDialog.getContentPane().add(mainWindow);
-            mDialog.pack();
-            mDialog.setLocationRelativeTo(null);
-            mDialog.setVisible(true);
-
-            // In GUI
-
-
-            PsiFile[] files = Utils.findLayoutResourceByNames(psiFile, project, "AndroidManifest");
-//            StringBuilder stringBuilder = new StringBuilder();
-//            for (PsiFile file : files) {
-//                stringBuilder.append("File: " + file.getContainingDirectory().getName());
-//            }
-
-            ClipboardOwner clipboardOwner = (clipboard, contents) -> {
-
-            };
-
-            //editor.getDocument().insertString(editor.getCaretModel().getOffset(), stringBuilder.toString());
-            // Look for the Android Manifest
-            PsiFile androidManifest = Utils.findLayoutResourceByName(psiFile, project, "AndroidManifest");
-
-            // Create XML element
-            // <uses-permission android:name="android.permission.INTERNET" />
-
-            String xmlTag = " <uses-permission android:name=\"android.permission." + permissionsMaps[2].getPermission() + "\" />";
-            StringSelection stringSelection = new StringSelection(xmlTag);
-            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-            clipboard.setContents(stringSelection, clipboardOwner);
-
-            Messages.showMessageDialog(project, "Permission has been copied to clipboard", "Message", Messages.getInformationIcon());
-
-            //JFrame mDialog = new JFrame();
-
-
-            XmlTag tagFromText = XmlElementFactory.getInstance(project).createTagFromText(xmlTag);
-            XmlFile containingFile = (XmlFile) androidManifest.getContainingFile();
-            ReadonlyStatusHandler.ensureFilesWritable(project, containingFile.getVirtualFile());
-
-//            containingFile.getRootTag().addSubTag(tagFromText, false);
-
+            permissionsMap = getJsonPermissions(editor);
+            ArrayList<PermissionMap> matchingPermissions = getMatchingPermissions((PsiIdentifier) referenceAt);
+            sortByConfidence(matchingPermissions);
+            prepareAndShowWindow(matchingPermissions, project);
         });
 
+    }
+
+    @NotNull
+    private ArrayList<PermissionMap> getMatchingPermissions(PsiIdentifier referenceAt) {
+        ArrayList<PermissionMap> matchingPermissions = new ArrayList<>();
+        for (PermissionMap permissionMap : permissionsMap) {
+            if (isContainsApi(getFullyQualifiedType(referenceAt), permissionMap)) {
+                matchingPermissions.add(permissionMap);
+            }
+        }
+        return matchingPermissions;
+    }
+
+    // XXX Is this operation costly?
+    private String getFullyQualifiedType(PsiIdentifier referenceAt) {
+        return ((PsiJavaCodeReferenceElement) referenceAt.getContext()).getQualifiedName();
+    }
+
+    private void copyPermissionToClipboard(String xmlTag) {
+        StringSelection stringSelection = new StringSelection(xmlTag);
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(stringSelection, (clipboard1, contents) -> {
+        });
+    }
+
+    private void prepareAndShowWindow(ArrayList<PermissionMap> matchingPermissions, @NotNull Project project) {
+        JFrame mDialog = new JFrame("");
+        mDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+
+        MainWindow mainWindow = new MainWindow(matchingPermissions);
+        mainWindow.setOnSelectionMadeListener(permissionMap -> {
+
+            copyPermissionToClipboard(permissionMap.getXMLPermissionTag());
+            Messages.showMessageDialog(project, "Permission has been copied to clipboard", "Message", Messages.getInformationIcon());
+            mDialog.setVisible(false);
+        });
+
+        mDialog.getContentPane().add(mainWindow);
+        mDialog.pack();
+        mDialog.setLocationRelativeTo(null);
+        mDialog.setVisible(true);
+    }
+
+    private void sortByConfidence(ArrayList<PermissionMap> matchingPermissions) {
+        Collections.sort(matchingPermissions, (first, second) -> {
+            final int BEFORE = -1;
+            final int EQUAL = 0;
+            final int AFTER = 1;
+            if (first.getConfidence() < second.getConfidence())
+                return AFTER;
+            else if (first.getConfidence().equals(second.getConfidence()))
+                return EQUAL;
+            else
+                return BEFORE;
+        });
+    }
+
+    private boolean isContainsApi(String fullyQualifiedType, PermissionMap permissionMap) {
+        return permissionMap.getApi().contains(fullyQualifiedType);
     }
 
     @Override
@@ -163,9 +134,19 @@ public class SuggestPermissionIntention implements IntentionAction {
         return true;
     }
 
-    private String getJsonPermissions() {
-
-
-        return null;
+    private PermissionMap[] getJsonPermissions(Editor editor) {
+        // Serialize json
+        PermissionMap[] permissionsMaps = null;
+        try {
+            Scanner scanner = new Scanner(SuggestPermissionIntention.this.getClass().getResourceAsStream("mapping.json"));
+            while (scanner.hasNextLine()) {
+                permissionsMaps = new Gson().fromJson(scanner.nextLine(), PermissionMap[].class);
+            }
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+            editor.getDocument().insertString(editor.getCaretModel().getOffset(), e.getLocalizedMessage());
+            return null;
+        }
+        return permissionsMaps;
     }
 }

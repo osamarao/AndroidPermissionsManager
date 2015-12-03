@@ -41,7 +41,7 @@ public class MainWindow extends JPanel{
             @Override
             public void actionPerformed(ActionEvent e) {
                 onSelectionMadeListener.onSelectionMade(mSelection);
-                MainWindow.this.setVisible(false);
+
             }
         });
         mConfirm.setPreferredSize(new Dimension(120, 26));
